@@ -1,3 +1,28 @@
+SwipeView
+============================
+
+This is a fork version with bug fix of SwipeView. Since cubiq don't touch it for 9 month.
+I think we should fork our own repository because I am using it and have some bug fixed.
+
+Changes
+----------------------------
+
+* Add a disable method
+
+Fixed Bugs
+----------------------------
+
+* Flipped event not trigger on browser don't sopport transition
+* Not work well if pages are less than 3
+* Protect goToPage method
+* Better support for resizeEvent
+
+Contributors
+----------------------------
+
+* @chunghe
+* @othree
+
 SwipeView v1.0 - 2012-08-25
 ============================
 
