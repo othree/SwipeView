@@ -5,6 +5,10 @@
 var SwipeView = (function (window, document) {
 	var dummyStyle = document.createElement('div').style,
 		vendor = (function () {
+      // workaround for HTC brwoser, it uses -webkit prefix 
+      // but not albe to get dummyStyle from a element
+      if (navigator.userAgent.indexOf('HTC') > -1)
+        return 'webkit'
 			var vendors = 't,webkitT,MozT,msT,OT'.split(','),
 				t,
 				i = 0,
@@ -35,7 +39,8 @@ var SwipeView = (function (window, document) {
 		translateZ = has3d ? ' translateZ(0)' : '',
 
 		// Events
-		resizeEvent = 'onorientationchange' in window ? 'orientationchange' : 'resize',
+		//resizeEvent = 'onorientationchange' in window ? 'orientationchange' : 'resize',
+    resizeEvent = 'resize',
 		startEvent = hasTouch ? 'touchstart' : 'mousedown',
 		moveEvent = hasTouch ? 'touchmove' : 'mousemove',
 		endEvent = hasTouch ? 'touchend' : 'mouseup',
@@ -90,7 +95,7 @@ var SwipeView = (function (window, document) {
 				div.id = 'swipeview-masterpage-' + (i+1);
 				div.style.cssText = cssVendor + 'transform:translateZ(0);position:absolute;top:0;height:100%;width:100%;left:' + i*100 + '%';
 				if (!div.dataset) div.dataset = {};
-				pageIndex = i == -1 ? this.options.numberOfPages - 1 : i;
+        pageIndex = i < 0 ? this.options.numberOfPages-1 : i > this.options.numberOfPages-1 ? 0 : i;
 				div.dataset.pageIndex = pageIndex;
 				div.dataset.upcomingPageIndex = pageIndex;
 				
@@ -128,6 +133,11 @@ var SwipeView = (function (window, document) {
 			this.customEvents.push(['flip', fn]);
 		},
 		
+		
+		onFliped: function (fn) {
+			this.wrapper.addEventListener('swipeview-fliped', fn, false);
+			this.customEvents.push(['fliped', fn]);
+		},
 		onMoveOut: function (fn) {
 			this.wrapper.addEventListener('swipeview-moveout', fn, false);
 			this.customEvents.push(['moveout', fn]);
@@ -143,6 +153,12 @@ var SwipeView = (function (window, document) {
 			this.customEvents.push(['touchstart', fn]);
 		},
 
+    disable: function () {
+			this.wrapper.removeEventListener(startEvent, this, false);
+			this.wrapper.removeEventListener(moveEvent, this, false);
+			this.wrapper.removeEventListener(endEvent, this, false);
+    },
+
 		destroy: function () {
 			while ( this.customEvents.length ) {
 				this.wrapper.removeEventListener('swipeview-' + this.customEvents[0][0], this.customEvents[0][1], false);
@@ -150,7 +166,7 @@ var SwipeView = (function (window, document) {
 			}
 			
 			// Remove the event listeners
-			window.removeEventListener(resizeEvent, this, false);
+      window.removeEventListener(resizeEvent, this, false);
 			this.wrapper.removeEventListener(startEvent, this, false);
 			this.wrapper.removeEventListener(moveEvent, this, false);
 			this.wrapper.removeEventListener(endEvent, this, false);
@@ -179,6 +195,9 @@ var SwipeView = (function (window, document) {
 		},
 		
 		goToPage: function (p) {
+      if (isNaN(+p)) {
+        return false; 
+      }
 			var i;
 
 			this.masterPages[this.currentMasterPage].className = this.masterPages[this.currentMasterPage].className.replace(/(^|\s)swipeview-active(\s|$)/, '');
@@ -224,6 +243,7 @@ var SwipeView = (function (window, document) {
 			}
 			
 			this.__flip();
+			this.__fliped();
 		},
 		
 		next: function () {
@@ -243,6 +263,7 @@ var SwipeView = (function (window, document) {
 		},
 
 		handleEvent: function (e) {
+      self = this;
 			switch (e.type) {
 				case startEvent:
 					this.__start(e);
@@ -255,11 +276,12 @@ var SwipeView = (function (window, document) {
 					this.__end(e);
 					break;
 				case resizeEvent:
-					this.__resize();
+          window.setTimeout(function(){self.__resize.call(self)}, 200);
 					break;
 				case transitionEndEvent:
 				case 'otransitionend':
-					if (e.target == this.slider && !this.options.hastyPageFlip) this.__flip();
+          if (e.target == this.slider && !this.options.hastyPageFlip) this.__flip();
+          if (e.target == this.slider) this.__fliped();
 					break;
 			}
 		},
@@ -273,6 +295,13 @@ var SwipeView = (function (window, document) {
 		__pos: function (x) {
 			this.x = x;
 			this.slider.style[transform] = 'translate(' + x + 'px,0)' + translateZ;
+      // for browser didn't support transitionEnd event (ie8, ie9)
+      // manually fire __flip event when position reaches pageWidth
+      /*
+      if (!hasTransitionEnd && this.x % this.pageWidth === 0) {                                  
+        this.__flip();
+      }
+      */
 		},
 
 		__resize: function () {
@@ -284,6 +313,7 @@ var SwipeView = (function (window, document) {
 		__start: function (e) {
 			//e.preventDefault();
 
+      if (this.wrapper.className.indexOf('disable-control') > -1) return;
 			if (this.initiated) return;
 			
 			var point = hasTouch ? e.touches[0] : e;
@@ -438,7 +468,7 @@ var SwipeView = (function (window, document) {
 				this.__flip();		// If we swiped all the way long to the next page (extremely rare but still)
 			} else {
 				this.__pos(newX);
-				if (this.options.hastyPageFlip) this.__flip();
+				if (this.options.hastyPageFlip || !hasTransitionEnd) this.__flip();
 			}
 		},
 		
@@ -449,7 +479,15 @@ var SwipeView = (function (window, document) {
 				this.masterPages[i].className = this.masterPages[i].className.replace(/(^|\s)swipeview-loading(\s|$)/, '');		// Remove the loading class
 				this.masterPages[i].dataset.pageIndex = this.masterPages[i].dataset.upcomingPageIndex;
 			}
+
+      if (!hasTransitionEnd) {
+          this.__fliped();
+      }
 		},
+
+    __fliped: function () {
+        this.__event('fliped');
+    },
 		
 		__event: function (type) {
 			var ev = document.createEvent("Event");
