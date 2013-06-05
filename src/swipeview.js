@@ -266,23 +266,23 @@ var SwipeView = (function (window, document) {
             self = this;
             switch (e.type) {
                 case startEvent:
-                this.__start(e);
-                break;
+                    this.__start(e);
+                    break;
                 case moveEvent:
-                this.__move(e);
-                break;
+                    this.__move(e);
+                    break;
                 case cancelEvent:
                 case endEvent:
-                this.__end(e);
-                break;
+                    this.__end(e);
+                    break;
                 case resizeEvent:
-                window.setTimeout(function(){self.__resize.call(self)}, 200);
-                break;
+                    window.setTimeout(function(){self.__resize.call(self)}, 200);
+                    break;
                 case transitionEndEvent:
                 case 'otransitionend':
-                if (e.target == this.slider && !this.options.hastyPageFlip) this.__flip();
-                if (e.target == this.slider) this.__fliped();
-                break;
+                    if (e.target == this.slider && !this.options.hastyPageFlip) this.__flip();
+                    if (e.target == this.slider) this.__fliped();
+                    break;
             }
         },
 
