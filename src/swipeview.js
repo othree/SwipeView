@@ -243,7 +243,9 @@ var SwipeView = (function (window, document) {
             }
 
             this.__flip();
-            this.__fliped();
+            if (hasTransitionEnd) {
+                this.__fliped();
+            }
         },
 
         next: function () {
